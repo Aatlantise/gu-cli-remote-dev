@@ -72,7 +72,7 @@ ssh -p 7503 -i id_rsa username@localhost
 
 If this works, it means your local port 7503 is successfully mapped to the remote compute node!
 
-![img.png](img.png)
+![img.png](assets/img.png)
 
 Cool sart!
 
@@ -82,7 +82,7 @@ Cool sart!
 Now, we open PyCharm, and open a local project you'd like to develop remotely.
 Go to File > Remote Development > SSH Connection, which gives us the following window:
 
-![img_1.png](img_1.png)
+![img_1.png](assets/img_1.png)
 
 Fill out the details, like your username, host (`localhost`) and location of the private key `id_rsa`.
 
@@ -94,11 +94,11 @@ Now we want to set up file sync. To do this, we go to Tools > Deployment > Confi
 Next, add connection, specify connection type to SFTP, and select the recently created SSH configuration. Crate your root path--I like to create a workspace in my remote home directory
 `mkdir ~/workspace` and use that as my root directory.
 
-![img_2.png](img_2.png)
+![img_2.png](assets/img_2.png)
 
 We want our local project files to sync with our remote workspace, so we map the local path `/path/to/your/project` to the deployment path `/` (which corresponds to `~/workspace`)
 
-![img_3.png](img_3.png)
+![img_3.png](assets/img_3.png)
 
 Set automatic file upload and click upload now.
 
@@ -107,7 +107,7 @@ Set automatic file upload and click upload now.
 We're almost done! We're working on the remote server, so we want to use the remote python interpreter as well. To do that, click on Python in the bottom right corner of your PyCharm window, then 
 select add new interpreter > on SSH. We'll use the existing SSH connection, the one we just made now. Make sure your `Sync folders` is correct--PyCharm sets it to a random `/tmp` directory by default.
 
-![img_4.png](img_4.png)
+![img_4.png](assets/img_4.png)
 
 Terminal setup is easy--simply selet the remote SSH in the dropdown list of available terminals in the terminals tab, accessibly via the icon on the bottom left side of your PyCharm window.
 
