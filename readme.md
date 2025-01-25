@@ -112,5 +112,40 @@ select add new interpreter > on SSH. We'll use the existing SSH connection, the 
 Terminal setup is easy--simply selet the remote SSH in the dropdown list of available terminals in the terminals tab, accessibly via the icon on the bottom left side of your PyCharm window.
 
 ## Test code, notebook, and debug
+PyCharm supports .ipynb support, and allows for easy run and debugging environments.
+
+It's like ptb.set_trace()...but easier!
+
+## Some other reminders
+
+Finally, I'd like to echo Woonki's messages:
+
+1. Please do not run your jobs on the login node
+Please use a Slurm interactive job or submit a Slurm batch job instead of running it directly on the login node. There are examples of gcloud storage or gsutil job scripts as well for data transfer. 
+
+https://hpc.georgetown.edu/how-to-run-jobs-slurm
+https://hpc.georgetown.edu/how-to-transfer-files/transferring-data-from-or-to-gcs
+
+2. Disk space
+
+Could you please clean up and/or archive your inactive data? If your application is producing a lot of cache/metadata, you should utilize `$SCRATCH` as shown in the Data Management. 
+
+FYI, as noted at Data Management for `$HOME`:
+It is not backed up.
+
+This is for active data only. Please do not use this as a long term data storage. You should remove inactive data from this.
+
+It is strongly recommended that you clean up your data, e.g., removing metadata, old projects files, tar files, etc., frequently for other users. Also you should back up finished data to appropriate storage like GCS.
+
+It is also recommended to utilize $SCRATCH below, if necessary.
 
 
+3. Memory for your jobs
+
+I see that you are submitting your job with a huge memory requirement. I am not sure if it really requires that much memory per job.. If so, it is fine. If not, it wastes resources for other users as well as yourself, blocking them. Also it would cost you/PI substantially higher SUs. If you are in the process of finding a proper max memory, please refer to the "Finding more about Jobs" section of https://hpc.georgetown.edu/how-to-run-jobs-slurm. For example, you can find the maximum memory (maxrss) used in the past jobs using the following command:
+```angular2html
+sacct -S2024-07-01 --format=jobid,jobname,elapsed,ncpus,ntasks,maxrss,state
+```
+
+
+Just in case, you can use `--mem` Slurm option for the total memory when submitting jobs, instead of `--mem-per-cpu` which is the memory per task or CPU.
