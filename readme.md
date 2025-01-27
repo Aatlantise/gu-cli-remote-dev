@@ -2,14 +2,17 @@
 
 Setting up remote development environment on Georgetown University's HPC GPU cluster.
 
-Before you follow this walkthrough, please set up your cluster access and install an IDE of your choice. This guide uses PyCharm.
+Before you follow this walkthrough, please set up your cluster access and install an IDE of your choice.
+This guide uses PyCharm.
 
 ## Connection sanity check
 
 First, we want to log on to the GCP console and check the cluster's hostname and external IP address.
-From the GCP dashboard, click _go to compute engine_ and you'll see the hostname under `Name` and external IP under `External IP`.
+From the GCP dashboard, click _go to compute engine_ and you'll see the hostname under `Name` and
+external IP under `External IP`.
 
-You can also connect to the ssh and enter from the command line: `gcloud compute instances list` which will give you the same information.
+You can also connect to the ssh and enter from the command line:
+`gcloud compute instances list` which will give you the same information.
 
 Once you have the IP address, ping from your terminal or PowerShell to see if a connection can be made:
 `ping xxx.xx.xx.xxx`. If you see lines like:
@@ -23,11 +26,17 @@ Success! We can `ctrl+c` out of there and proceed.
 
 ## Setting up SSH connection to login node
 
-To set up remote development, we need to set up an SSH connection between your local machine, and the login node (this is specific to GU HPC clusters--each server can have slightly different setup).
+To set up remote development, we need to set up an SSH connection between your local machine,
+and the login node (this is specific to GU HPC clusters--each server can have slightly different setup).
+If you already set up connection with `gcloud init` as recommended by HPC documentation, you're in luck!
+Skip to the next step.
+We can use the `google_compute_engine` key, likely at `~/.ssh`.
 
-Let's first create an ssh key: ```ssh-keygen -t rsa -b 4096 -C your_email@georgetown.edu```
+Otherwise, let's first create an ssh key: ```ssh-keygen -t rsa -b 4096 -C your_email@georgetown.edu```
 
-That will create a public and private key at `~/.ssh`. There is a `ssh-copy-id username@server-address` command that can copy your key to the remote server, but that didn't work for me.
+That will create a public and private key at `~/.ssh`.
+There is a `ssh-copy-id username@server-address` command that can copy your key to the remote server,
+but that didn't work for me.
 
 So, we'll do that manually.
 
@@ -46,17 +55,23 @@ chmod 600 ~/.ssh/authorized_keys
 Then, from where the local key `rsa_id` is stored, we can SSH into the login node:
 `ssh -i rsa_id username@remote_server`
 
-Great! We're in the login node. But be wary--our HPC program manager [Woonki](mailto:chung@georgetown.edu) asks us to be carefuly and not run jobs on the login node.
+Great! We're in the login node.
+But be wary--our HPC program manager [Woonki](mailto:chung@georgetown.edu)
+asks us to be carefuly and not run jobs on the login node.
 Where do we run things instead? On the compute node!
 
 ## Creating a compute node and an SSH tunnel to it
 
-From the login node, we want to create a compute node. Because right now, we are just testing out the connection, let's forgo the GPU for now, and run
-`srun --pty bash`. If we were to ask for a compute node with a GPU, we can simply add `--gres=gpu` to make `srun --gres=gpu --pty bash`.
+From the login node, we want to create a compute node. Because right now, we are just testing out the connection,
+let's forgo the GPU for now, and run `srun --pty bash`.
+If we were to ask for a compute node with a GPU,
+we can simply add `--gres=gpu` to make `srun --gres=gpu --pty bash`.
 
-It's not possible to SSH directly into the compute node because the compute node has no external IP address. So, we'll have to create an SSH tunnel via port forwarding.
+It's not possible to SSH directly into the compute node because the compute node has no external IP address.
+So, we'll have to create an SSH tunnel via port forwarding.
 
-Find the compute node's hostname with `hostname` or by checking the compute engine dashboard on GCP web, then set up tunneling.
+Find the compute node's hostname with `hostname` or by checking the compute engine dashboard on GCP web,
+then set up tunneling.
 
 Pick your favorite 4- or 5-digit number to serve as your own port. Mine is `7503`.
 Then, From the local machine:
@@ -64,7 +79,8 @@ Then, From the local machine:
 ssh -i id_rsa -L 7503:compute-node-hostname:22 username@login-node-address
 ```
 
-This will simply take you to the login node. In a separate terminal on the local machine, try ssh-ing into the compute note with:
+This will simply take you to the login node.
+In a separate terminal on the local machine, try ssh-ing into the compute note with:
 
 ```angular2html
 ssh -p 7503 -i id_rsa username@localhost
@@ -91,12 +107,14 @@ This takes a bit. But now we're in!
 ### File sync
 Now we want to set up file sync. To do this, we go to Tools > Deployment > Configuration.
 
-Next, add connection, specify connection type to SFTP, and select the recently created SSH configuration. Crate your root path--I like to create a workspace in my remote home directory
+Next, add connection, specify connection type to SFTP, and select the recently created SSH configuration.
+Crate your root path--I like to create a workspace in my remote home directory
 `mkdir ~/workspace` and use that as my root directory.
 
 ![img_2.png](assets/img_2.png)
 
-We want our local project files to sync with our remote workspace, so we map the local path `/path/to/your/project` to the deployment path `/` (which corresponds to `~/workspace`)
+We want our local project files to sync with our remote workspace,
+so we map the local path `/path/to/your/project` to the deployment path `/` (which corresponds to `~/workspace`)
 
 ![img_3.png](assets/img_3.png)
 
@@ -104,48 +122,122 @@ Set automatic file upload and click upload now.
 
 ### Interpreter and terminal setup
 
-We're almost done! We're working on the remote server, so we want to use the remote python interpreter as well. To do that, click on Python in the bottom right corner of your PyCharm window, then 
-select add new interpreter > on SSH. We'll use the existing SSH connection, the one we just made now. Make sure your `Sync folders` is correct--PyCharm sets it to a random `/tmp` directory by default.
+We're almost done! We're working on the remote server, so we want to use the remote python interpreter as well.
+
+If we want to load a module or set up a virtual environment, let's do that first.
+
+The CLI cluster's default interpreter is Python 3.6, whose remote console is not supported by Pycharm.
+We can `module list anaconda3` to list available Python versions,
+and select a module with a more recent version of Python.
+I pick Python 3.11: `module load anaconda3/3.11`
+
+A small version check wouldn't hurt: `python3 -V`
+
+We should also pick a CUDA version that is compatible with your version of `torch`, `tensorflow`,
+or other matrix-oriented libraries. I pick CUDA 12.5:
+`module load cuda/12.5`
+
+We can also create a virtual environment, which I recommend:
+`python3 -m venv /path/to/virtual/env`
+
+Then, activate it:
+`source /path/to/virtual/env/bin/activate`
+
+Cool! Just one more thing:
+because we activated a module, which is terminal-specific before we created a virtual environment,
+we need to make sure PyCharm would too.
+
+With `vim python_with_cuda.sh` we can write a simple bash file, something like:
+```angular2html
+#!/bin/bash
+module load cuda/12.5
+exec /path/to/virtual/env/bin/python3 "$@"
+```
+Here, we do not need to specify the Anaconda module, since the virtual environment has that information.
+We only specify cuda model, and to pass along any arguments to python with `"$@`.
+
+We're ready to set up our remote Python console!
+To do that, click on Python in the bottom right corner of your PyCharm window, then 
+select add new interpreter > on SSH. We'll use the existing SSH connection, the one we just made now.
+Make sure your `Sync folders` is correct--PyCharm sets it to a random `/tmp` directory by default.
+
+Now, for an interpreter, instead of the default `/usr/bin/python`, we instead pick the bash file we created earlier:
+`python_with_cuda.sh`.
 
 ![img_4.png](assets/img_4.png)
 
-Terminal setup is easy--simply selet the remote SSH in the dropdown list of available terminals in the terminals tab, accessibly via the icon on the bottom left side of your PyCharm window.
+Terminal setup is easy.
+Simply select the remote SSH in the dropdown list of available terminals in the terminals tab,
+accessible via the icon on the bottom left side of your PyCharm window.
+
 
 ## Test code, notebook, and debug
 PyCharm supports .ipynb support, and allows for easy run and debugging environments.
 
 It's like ptb.set_trace()...but easier!
 
+But, if for a good reason you want to launch a notebook on the remote server and work on it on your local browser,
+you can still do that via SSH tunneling.
+
+First set up a remote virtual environment as you wish and install Jupyter: `pip install jupyter`
+
+Then, simply launch with a specific IP and port:
+```
+jupyter notebook --no-browser --port=8888 --ip=0.0.0.0
+```
+
+Now, set up SSH tunneling:
+```angular2html
+ssh -i your-private-key -L 9999:compute-node-hostname:8888 username@login-node-external-address
+```
+
+Then, go [here](localhost:9999).
+It will ask you for the token, which you can copy from your compute node terminal.
+Or, paste from your compute node into your browser `localhost:9999/tree?token=some-alphanumeric-token`.
+
+Voila!
+
 ## Some other reminders
 
 Finally, I'd like to echo Woonki's messages:
 
 1. Please do not run your jobs on the login node
-Please use a Slurm interactive job or submit a Slurm batch job instead of running it directly on the login node. There are examples of gcloud storage or gsutil job scripts as well for data transfer. 
+Please use a Slurm interactive job or submit a Slurm batch job instead of running it directly on the login node.
+2. There are examples of gcloud storage or gsutil job scripts as well for data transfer. 
 
 https://hpc.georgetown.edu/how-to-run-jobs-slurm
 https://hpc.georgetown.edu/how-to-transfer-files/transferring-data-from-or-to-gcs
 
 2. Disk space
 
-Could you please clean up and/or archive your inactive data? If your application is producing a lot of cache/metadata, you should utilize `$SCRATCH` as shown in the Data Management. 
+Could you please clean up and/or archive your inactive data?
+If your application is producing a lot of cache/metadata, you should utilize `$SCRATCH` as shown in the Data Management. 
 
 FYI, as noted at Data Management for `$HOME`:
 It is not backed up.
 
-This is for active data only. Please do not use this as a long term data storage. You should remove inactive data from this.
+This is for active data only. Please do not use this as a long term data storage.
+You should remove inactive data from this.
 
-It is strongly recommended that you clean up your data, e.g., removing metadata, old projects files, tar files, etc., frequently for other users. Also you should back up finished data to appropriate storage like GCS.
+It is strongly recommended that you clean up your data, e.g., removing metadata, old projects files, tar files, etc.,
+frequently for other users. Also you should back up finished data to appropriate storage like GCS.
 
 It is also recommended to utilize $SCRATCH below, if necessary.
 
 
 3. Memory for your jobs
 
-I see that you are submitting your job with a huge memory requirement. I am not sure if it really requires that much memory per job.. If so, it is fine. If not, it wastes resources for other users as well as yourself, blocking them. Also it would cost you/PI substantially higher SUs. If you are in the process of finding a proper max memory, please refer to the "Finding more about Jobs" section of https://hpc.georgetown.edu/how-to-run-jobs-slurm. For example, you can find the maximum memory (maxrss) used in the past jobs using the following command:
+I see that you are submitting your job with a huge memory requirement.
+I am not sure if it really requires that much memory per job.. If so, it is fine.
+If not, it wastes resources for other users as well as yourself, blocking them.
+Also it would cost you/PI substantially higher SUs.
+If you are in the process of finding a proper max memory,
+please refer to the "Finding more about Jobs" section of https://hpc.georgetown.edu/how-to-run-jobs-slurm.
+For example, you can find the maximum memory (maxrss) used in the past jobs using the following command:
+
 ```angular2html
 sacct -S2024-07-01 --format=jobid,jobname,elapsed,ncpus,ntasks,maxrss,state
 ```
 
-
-Just in case, you can use `--mem` Slurm option for the total memory when submitting jobs, instead of `--mem-per-cpu` which is the memory per task or CPU.
+Just in case, you can use `--mem` Slurm option for the total memory when submitting jobs,
+instead of `--mem-per-cpu` which is the memory per task or CPU.
