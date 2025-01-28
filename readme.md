@@ -5,6 +5,17 @@ Setting up remote development environment on Georgetown University's HPC GPU clu
 Before you follow this walkthrough, please set up your cluster access and install an IDE of your choice.
 This guide uses PyCharm.
 
+Throughout the guide, I present general code, as well as how that code looks on my environment.
+For example:
+```angular2html
+source /path/to/virtual/env/bin/activate
+# source ~/jupyter-venv/bin/activate
+```
+
+Hope this helps! Feel free to cross-reference the
+[HPC Documentation](https://hpc.georgetown.edu/how-to-run-jobs-slurm/how-to-use-gpu-resources).
+
+
 ## Connection sanity check
 
 First, we want to log on to the GCP console and check the cluster's hostname and external IP address.
@@ -12,14 +23,21 @@ From the GCP dashboard, click _go to compute engine_ and you'll see the hostname
 external IP under `External IP`.
 
 You can also connect to the ssh and enter from the command line:
-`gcloud compute instances list` which will give you the same information.
+```
+gcloud compute instances list
+```
+which will give you the same information.
 
 Once you have the IP address, ping from your terminal or PowerShell to see if a connection can be made:
-`ping xxx.xx.xx.xxx`. If you see lines like:
+```
+ping xxx.xx.xx.
+# ping 83.52.196.75
+```
+. If you see lines like:
 
 ```
-64 bytes from 34.74.129.118: icmp_seq=1 ttl=55 time=39.3 ms
-64 bytes from 34.74.129.118: icmp_seq=9 ttl=55 time=37.3 ms
+64 bytes from 83.52.196.75: icmp_seq=1 ttl=55 time=39.3 ms
+64 bytes from 83.52.196.75: icmp_seq=9 ttl=55 time=37.3 ms
 ```
 
 Success! We can `ctrl+c` out of there and proceed.
@@ -32,28 +50,43 @@ If you already set up connection with `gcloud init` as recommended by HPC docume
 Skip to the next step.
 We can use the `google_compute_engine` key, likely at `~/.ssh`.
 
-Otherwise, let's first create an ssh key: ```ssh-keygen -t rsa -b 4096 -C your_email@georgetown.edu```
+Otherwise, let's first create an ssh key:
+```
+ssh-keygen -t rsa -b 4096 -C your_email@georgetown.edu
+# ssh-keygen -t rsa -b 4096 -C jim335@georgetown.edu
+```
 
 That will create a public and private key at `~/.ssh`.
-There is a `ssh-copy-id username@server-address` command that can copy your key to the remote server,
+There is a 
+```
+ssh-copy-id username@server-address
+ssh-copy-id jim335@83.52.196.75
+```
+command that can copy your key to the remote server,
 but that didn't work for me.
 
 So, we'll do that manually.
 
 Let's print out the public key from your local machine:
 ```
-cd ~/.ssh
-cat id_rsa.pub
+cat /path/to/your/public/key.pub
+# cat ~/.ssh/id_rsa.pub
 ```
 We manually copy the public key, and on the remote server (accessible by web or gcloud sdk),
 
 ```angular2html
-echo "public-key-text-here" >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
+echo "public-key-text-here" >> /path/to/ssh/keys/authorized_keys
+chmod 600 /path/to/ssh/keys/authorized_keys
+
+# echo "ssh-rsa AAABLKDSAJEweifwlfk23489534gkklsdasdhf238942908 MY-PC\junghyun@MY-PC" >> ~/.ssh/authorized_keys
+# chmod 600 ~/.ssh/authorized_keys
 ```
 
 Then, from where the local key `rsa_id` is stored, we can SSH into the login node:
-`ssh -i rsa_id username@remote_server`
+```
+ssh -i your-private-key username@remote_server
+# ssh -i ~/.ssh/id_rsa jim335@83.52.196.75
+```
 
 Great! We're in the login node.
 But be wary--our HPC program manager [Woonki](mailto:chung@georgetown.edu)
@@ -63,7 +96,10 @@ Where do we run things instead? On the compute node!
 ## Creating a compute node and an SSH tunnel to it
 
 From the login node, we want to create a compute node. Because right now, we are just testing out the connection,
-let's forgo the GPU for now, and run `srun --pty bash`.
+let's forgo the GPU for now, and run 
+```
+srun --pty bash
+```
 If we were to ask for a compute node with a GPU,
 we can simply add `--gres=gpu` to make `srun --gres=gpu --pty bash`.
 
@@ -76,14 +112,16 @@ then set up tunneling.
 Pick your favorite 4- or 5-digit number to serve as your own port. Mine is `7503`.
 Then, From the local machine:
 ```angular2html
-ssh -i id_rsa -L 7503:compute-node-hostname:22 username@login-node-address
+ssh -i your-private-key -L your-fav-port:compute-node-hostname:22 username@login-node-address
+# ssh -i ~/.ssh/id_rsa -L 7503:purple-base-cli-0
 ```
 
 This will simply take you to the login node.
 In a separate terminal on the local machine, try ssh-ing into the compute note with:
 
 ```angular2html
-ssh -p 7503 -i id_rsa username@localhost
+ssh -p your-port -i your-private-key username@localhost
+# ssh -p 7503 -i ~/.ssh/id_rsa -L jim335@localhost
 ```
 
 If this works, it means your local port 7503 is successfully mapped to the remote compute node!
@@ -130,6 +168,9 @@ From here, let's finally create and activate the virtual environment:
 ```
 python -m venv /path/to/virtual/environment
 source /path/to/virtual/environment/bin/activate
+
+# python -m venv ~/prosody
+# source ~/prosody/bin/activate
 ```
 
 Now, you can set up your environment if you have a `requirements.txt` or `setup.py`.
@@ -140,7 +181,8 @@ Pycharm would need to do the same, but it doesn't have explicit access to the mo
 
 However, we can implement a small workaround. With `vim` or any other text editor:
 ```angular2html
-vim /path/to/virtual/environment/python-with-cuda.sh
+vim /path/to/virtual/environment/cool-bash-script.sh
+# vim ~/prosody/python-with-cuda.sh
 ```
 
 The following content ensures that the base interpreter is called after loading the CUDA 12.5 module.
@@ -148,6 +190,7 @@ The following content ensures that the base interpreter is called after loading 
 #!/bin/bash
 module load cuda/12.5
 exec /path/to/virtual/env/bin/python3 "$@"
+# exec ~/prosody/bin/python3 "$@"
 ```
 You can skip this step if you did not load any modules.
 
@@ -170,7 +213,7 @@ Then, when prompted, provide your private SSH key.
 Then, specify your existing interpreter.
 For me it's the bash file `~/prosody/python-with-cuda.sh`.
 If you didn't write a bash file referring to a necessary module, it would simply be
-`/path/to/your/environment/bin/python3`.
+`/path/to/your/environment/bin/python3`. For me, it's `~/prosody/bin/python3`
 ![img_1.png](assets/img_6.png)
 
 Then, set your sync folder destination.
@@ -184,7 +227,7 @@ Now that we've established console and file sync, setting up terminal should be 
 
 Click on the terminal button on the lower left hand side corner.
 Your current tab should be `Local`, but click on the downward arrow next to it,
-and you should be able to select the remote terminal that looks like `username@localhost:port`
+and you should be able to select the remote terminal that looks like `username@localhost:port #jim335@localhost:7503`
 
 Congratulations! Now your local files are also on the remote server,
 and your PyCharm's interpreter uses the remote compute.
@@ -202,17 +245,23 @@ First set up a remote virtual environment as you wish and install Jupyter: `pip 
 
 Then, simply launch with a specific IP and port:
 ```
-jupyter notebook --no-browser --port=8888 --ip=0.0.0.0
+jupyter notebook --no-browser --port=remote-port --ip=0.0.0.0
+# jupyter notebook --no-browser --port=8888 --ip=0.0.0.0
 ```
 
 Now, set up SSH tunneling:
 ```angular2html
-ssh -i your-private-key -L 9999:compute-node-hostname:8888 username@login-node-external-address
+ssh -i your-private-key -L local-port:compute-node-hostname:remote-port username@login-node-external-address
+# ssh -i ~/.ssh/id_rsa -L 9999:purple-base-cli-0:8888 jim35@83.52.196.75
 ```
 
-Then, go [here](localhost:9999).
+Then, go to `localhost:local-port # localhost:9999` on your browser.
 It will ask you for the token, which you can copy from your compute node terminal.
-Or, paste from your compute node into your browser `localhost:9999/tree?token=some-alphanumeric-token`.
+Or, paste from your compute node into your browser 
+```
+localhost:local-port/tree?token=some-alphanumeric-token
+# localhost:9999/tree?token=2q489f2iofj8fsdaklfj892q34j829rfujaskldfjkl
+```
 
 Voila!
 
