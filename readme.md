@@ -92,84 +92,103 @@ If this works, it means your local port 7503 is successfully mapped to the remot
 
 Cool sart!
 
-## Connect on PyCharm, set up file sync, Python interpreter, and terminal
+## Virtual environment setup
 
-### SSH on PyCharm
-Now, we open PyCharm, and open a local project you'd like to develop remotely.
-Go to File > Remote Development > SSH Connection, which gives us the following window:
+Ok, so far, we have:
+1. Set up an SSH connection to the login node
+2. Set up a tunnel to the compute node
 
-![img_1.png](assets/img_1.png)
+Now, before we configure a remote Python console on PyCharm,
+let's create a virtual environment, one we will use for our PyCharm console.
+With commands like
+```angular2html
+python -V
+nvcc --version
+nvidia-smi
+```
+We can check Python and CUDA versions.
 
-Fill out the details, like your username, host (`localhost`) and location of the private key `id_rsa`.
+My cluster's default envrionment (Python3.6) supports
+neither recent `torch` versions nor PyCharm's remote interpreter console!
 
-This takes a bit. But now we're in!
+So, we want to create a virtual environment that PyCharm can use.
+We can start from picking the right modules.
 
-### File sync
-Now we want to set up file sync. To do this, we go to Tools > Deployment > Configuration.
+With `module avail` we can see what modules are available.
+```angular2html
+module avail anaconda3
+module avail cuda
+```
+It turns out `anaconda3/3.11` and `cuda/12.5` are available in the remote cluster, so let's activate them:
 
-Next, add connection, specify connection type to SFTP, and select the recently created SSH configuration.
-Crate your root path--I like to create a workspace in my remote home directory
-`mkdir ~/workspace` and use that as my root directory.
+```
+module load anaconda3/3.11
+module load cuda/12.5
+```
 
-![img_2.png](assets/img_2.png)
+From here, let's finally create and activate the virtual environment:
+```
+python -m venv /path/to/virtual/environment
+source /path/to/virtual/environment/bin/activate
+```
 
-We want our local project files to sync with our remote workspace,
-so we map the local path `/path/to/your/project` to the deployment path `/` (which corresponds to `~/workspace`)
+Now, you can set up your environment if you have a `requirements.txt` or `setup.py`.
 
-![img_3.png](assets/img_3.png)
+One more thing before we configure the remote interpreter!
+Before we created the virtual environment, we loaded the `cuda/12.5` module.
+Pycharm would need to do the same, but it doesn't have explicit access to the module command.
 
-Set automatic file upload and click upload now.
+However, we can implement a small workaround. With `vim` or any other text editor:
+```angular2html
+vim /path/to/virtual/environment/python-with-cuda.sh
+```
 
-### Interpreter and terminal setup
-
-We're almost done! We're working on the remote server, so we want to use the remote python interpreter as well.
-
-If we want to load a module or set up a virtual environment, let's do that first.
-
-The CLI cluster's default interpreter is Python 3.6, whose remote console is not supported by Pycharm.
-We can `module list anaconda3` to list available Python versions,
-and select a module with a more recent version of Python.
-I pick Python 3.11: `module load anaconda3/3.11`
-
-A small version check wouldn't hurt: `python3 -V`
-
-We should also pick a CUDA version that is compatible with your version of `torch`, `tensorflow`,
-or other matrix-oriented libraries. I pick CUDA 12.5:
-`module load cuda/12.5`
-
-We can also create a virtual environment, which I recommend:
-`python3 -m venv /path/to/virtual/env`
-
-Then, activate it:
-`source /path/to/virtual/env/bin/activate`
-
-Cool! Just one more thing:
-because we activated a module, which is terminal-specific before we created a virtual environment,
-we need to make sure PyCharm would too.
-
-With `vim python_with_cuda.sh` we can write a simple bash file, something like:
+The following content ensures that the base interpreter is called after loading the CUDA 12.5 module.
 ```angular2html
 #!/bin/bash
 module load cuda/12.5
 exec /path/to/virtual/env/bin/python3 "$@"
 ```
-Here, we do not need to specify the Anaconda module, since the virtual environment has that information.
-We only specify cuda model, and to pass along any arguments to python with `"$@`.
+You can skip this step if you did not load any modules.
 
-We're ready to set up our remote Python console!
-To do that, click on Python in the bottom right corner of your PyCharm window, then 
-select add new interpreter > on SSH. We'll use the existing SSH connection, the one we just made now.
-Make sure your `Sync folders` is correct--PyCharm sets it to a random `/tmp` directory by default.
+## Remote interpreter, terminal, file sync configuration
 
-Now, for an interpreter, instead of the default `/usr/bin/python`, we instead pick the bash file we created earlier:
-`python_with_cuda.sh`.
+Now onto PyCharm. We will configure three things:
+1. The remote interpreter
+2. Remote-local file sync (if you want)
+3. The remote terminal
 
-![img_4.png](assets/img_4.png)
+To set up the remote interpreter, you can click on the Python button on the bottom right corner > add new interpreter
+Or, File > Settings > Project (project name) > Python interpreter
 
-Terminal setup is easy.
-Simply select the remote SSH in the dropdown list of available terminals in the terminals tab,
-accessible via the icon on the bottom left side of your PyCharm window.
+Click on Add interpreter > On SSH.
+Enter your hostname (localhost), port (`7503` for me), and username.
+![img.png](assets/img_5.png)
 
+Then, when prompted, provide your private SSH key.
+
+Then, specify your existing interpreter.
+For me it's the bash file `~/prosody/python-with-cuda.sh`.
+If you didn't write a bash file referring to a necessary module, it would simply be
+`/path/to/your/environment/bin/python3`.
+![img_1.png](assets/img_6.png)
+
+Then, set your sync folder destination.
+You will be able to choose to sync your local files to this directory.
+It would be a smart idea to create a project-specific work directory and use that.
+I simply put `~/workspace` as an example.
+
+The, click on Create and boom! You configured your remote interpreter and file sync.
+
+Now that we've established console and file sync, setting up terminal should be easy.
+
+Click on the terminal button on the lower left hand side corner.
+Your current tab should be `Local`, but click on the downward arrow next to it,
+and you should be able to select the remote terminal that looks like `username@localhost:port`
+
+Congratulations! Now your local files are also on the remote server,
+and your PyCharm's interpreter uses the remote compute.
+You are able to develop interactively on the same environment as to where you would submit jobs.
 
 ## Test code, notebook, and debug
 PyCharm supports .ipynb support, and allows for easy run and debugging environments.
