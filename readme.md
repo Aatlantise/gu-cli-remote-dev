@@ -113,7 +113,7 @@ Pick your favorite 4- or 5-digit number to serve as your own port. Mine is `7503
 Then, From the local machine:
 ```angular2html
 ssh -i your-private-key -L your-fav-port:compute-node-hostname:22 username@login-node-address
-# ssh -i ~/.ssh/id_rsa -L 7503:purple-base-cli-0
+# ssh -i ~/.ssh/id_rsa -L 7503:purple-base-cli-0:22 jim335@83.52.196.75
 ```
 
 This will simply take you to the login node.
@@ -227,7 +227,11 @@ Now that we've established console and file sync, setting up terminal should be 
 
 Click on the terminal button on the lower left hand side corner.
 Your current tab should be `Local`, but click on the downward arrow next to it,
-and you should be able to select the remote terminal that looks like `username@localhost:port #jim335@localhost:7503`
+and you should be able to select the remote terminal that looks like 
+```
+username@localhost:port 
+#jim335@localhost:7503
+```
 
 Congratulations! Now your local files are also on the remote server,
 and your PyCharm's interpreter uses the remote compute.
@@ -255,7 +259,12 @@ ssh -i your-private-key -L local-port:compute-node-hostname:remote-port username
 # ssh -i ~/.ssh/id_rsa -L 9999:purple-base-cli-0:8888 jim35@83.52.196.75
 ```
 
-Then, go to `localhost:local-port # localhost:9999` on your browser.
+Then, go to
+```
+localhost:local-port 
+# localhost:9999
+```
+on your browser.
 It will ask you for the token, which you can copy from your compute node terminal.
 Or, paste from your compute node into your browser 
 ```
