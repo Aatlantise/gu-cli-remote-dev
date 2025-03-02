@@ -274,6 +274,31 @@ localhost:local-port/tree?token=some-alphanumeric-token
 
 Voila!
 
+## VSCode setup (alternative to PyCharm)
+
+If you prefer VSCode over PyCharm, you can follow these steps:
+
+- Head to Extensions (Ctrl+Shift+X) and install "Remote - SSH", "Remote - SSH: Editing Configuration Files", "Remote Explorer", and "Remote Tunnels".
+- Reload VSCode if needed. You should now see Remote Explorer as an option on the sidebar below Extensions.
+- You should see an SSH Dropdown. Click on the gear icon (simpler than the +).
+- Format your credentials like so (leave a blank line between each SSH connection you want VSCode to know about as shown):
+
+```
+Host 12.23.567.890
+  HostName 12.23.567.890
+  IdentityFile /home/myuser/.ssh/credentials
+  User remote_server_username
+
+Host 09.87.654.321
+  HostName 09.87.654.321
+  IdentityFile /home/myuser/.ssh/other_credentials
+  User other_remote_server_username
+```
+
+You should now see any connections you added in the Remote Explorer dropdown. Simply choose the connection you want to open, and click the arrow on the right-hand side (or the other icon to open in a new window).
+
+Please reach out to drd92@georgetown.edu if you have any issues connecting with VSCode (or to report any issues with this portion of the tutorial)!
+
 ## Some other reminders
 
 Finally, I'd like to echo Woonki's messages:
